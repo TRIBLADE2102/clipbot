@@ -238,7 +238,7 @@ def main():
     if "--selftest" in sys.argv:
         return selftest()
     dry = "--dry-run" in sys.argv
-    posted = set(json.loads(POSTED.read_text())) if POSTED.exists() else set()
+    posted = set(json.loads(POSTED.read_text())) if POSTED.exists() and not dry else set()  # dry run previews even posted clips
     h, yt = twitch_headers(), None
     prefer = game_id(h, CONFIG.get("prefer_game", ""))
     budget = CONFIG["clips_per_run"]
