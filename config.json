@@ -1,0 +1,22 @@
+{
+  "streamers": [
+    {
+      "twitch_login": "jshock9nine",
+      "hashtag": "#JShock",
+      "watermark": "assets/jshock_watermark.png",
+      "permission": "Content Rewards: $3,000 JShock Clipping Campaign (Reach), joined 2026-11-16, ends 27 Nov. Needs JShock watermark + #JShock."
+    },
+    {
+      "twitch_login": "clix",
+      "hashtag": "#Clix",
+      "facecam": [0, 292, 488, 274],
+      "permission": "Content Rewards: $5,000 Clix Pool Campaign (Reach), joined 2026-11-16, ends 30 Nov. Clix name on screen + #Clix."
+    }
+  ],
+  "clips_per_run": 1,
+  "lookback_hours": 48,
+  "min_views": 300,
+  "privacy": "private",
+  "prefer_game": "Grand Theft Auto VI",
+  "disclosure": "#ad Paid clip"
+}

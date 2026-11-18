@@ -1,0 +1,8 @@
+.env
+token.json
+client_secret.json
+.venv/
+out/
+opus_test/
+*.log
+__pycache__/
