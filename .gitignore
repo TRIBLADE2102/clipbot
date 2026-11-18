@@ -6,3 +6,4 @@ out/
 opus_test/
 *.log
 __pycache__/
+set_secrets.sh
