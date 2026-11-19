@@ -20,7 +20,7 @@ def is_spike(count, history):
     if len(history) < 6:  # need ~1 minute of baseline first
         return False
     base = statistics.median(history)
-    return count >= max(8, base * 3, base + 12)
+    return count >= max(10, base * 4, base + 15)
 
 
 def chat_counter(login, counts, stop):
@@ -59,10 +59,10 @@ def cut(seg_dir, start, end, out):
 
 def selftest():
     calm = deque([3, 4, 2, 5, 3, 4], maxlen=30)
-    assert not is_spike(9, calm) and is_spike(20, calm)
+    assert not is_spike(18, calm) and is_spike(25, calm)
     assert not is_spike(50, deque([3, 4])), "no spikes before a baseline exists"
     busy = deque([40, 45, 38, 50, 42, 44], maxlen=30)
-    assert not is_spike(70, busy) and is_spike(140, busy)
+    assert not is_spike(120, busy) and is_spike(180, busy)
     print("live selftest ok")
 
 
@@ -104,7 +104,7 @@ def main():
                 if cut(seg_dir, spike_at - BEFORE, spike_at + WINDOW + AFTER, raw):
                     last_clip = spike_at
                     clip = {"id": f"live_{login}_{spike_at}", "file": raw, "title": "", "broadcaster_name": login,
-                            "broadcaster_login": login, "url": f"https://twitch.tv/{login}"}
+                            "broadcaster_login": login, "url": f"https://twitch.tv/{login}", "creator_name": "clipbot (live)"}
                     try:
                         path, title = cb.make_short(clip, s)
                         print(f"  short: {path}\n  title: {title}", flush=True)

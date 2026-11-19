@@ -26,3 +26,7 @@ jobs:
         run: |
           printf '%s' "$YT_TOKEN" > token.json
           python -u watch.py
+      - name: Keep Shorts for TikTok/IG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: "shorts-${{ github.run_id }}", path: out/*.mp4, retention-days: 7, if-no-files-found: ignore}
