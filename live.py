@@ -110,8 +110,10 @@ def main():
                         print(f"  short: {path}\n  title: {title}", flush=True)
                         if not dry and uploaded < max_up:
                             yt = yt or cb.youtube()
-                            print(f"  uploaded https://youtu.be/{cb.upload(yt, path, clip, s.get('hashtag', ''), title)}", flush=True)
-                            uploaded += 1
+                            vid = cb.upload(yt, path, clip, s.get('hashtag', ''), title)
+                            if vid:
+                                print(f"  uploaded https://youtu.be/{vid}", flush=True)
+                                uploaded += 1
                     except Exception as e:  # one bad clip must not stop the recording
                         print(f"  ! clip failed: {e}", flush=True)
                     raw.unlink(missing_ok=True)

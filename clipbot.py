@@ -203,7 +203,46 @@ def youtube():
     return build("youtube", "v3", credentials=creds)
 
 
+SAFETY_PROMPT = ("You screen gaming-stream clips before they are posted to YouTube Shorts. You get still frames "
+                 "taken every few seconds. Video games count the same as real footage. Reply UNSAFE if any frame "
+                 "shows: nudity (exposed breasts, buttocks or genitals, including in-game or partly covered), sexual "
+                 "acts or strongly sexual poses, graphic gore or dismemberment, or real-world violence. Otherwise "
+                 "reply SAFE. Reply with SAFE or UNSAFE, then a few words of reason.")
+
+
+def safe_to_post(path):
+    """Asks Claude to check still frames for nudity/gore. Fails closed: any error means don't post."""
+    import base64, tempfile
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return False, "no API key for safety check"
+    import anthropic
+    with tempfile.TemporaryDirectory() as d:
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), "-vf", "fps=1/2,scale=384:-2",
+                        "-q:v", "5", f"{d}/f%03d.jpg"], check=True)
+        frames = sorted(Path(d).glob("f*.jpg"))[:24]
+        content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                    "data": base64.b64encode(f.read_bytes()).decode()}} for f in frames]
+    if not content:
+        return False, "no frames"
+    content.append({"type": "text", "text": "SAFE or UNSAFE?"})
+    try:
+        r = anthropic.Anthropic().messages.create(model="claude-opus-5-5", max_tokens=200,
+                                                  output_config={"effort": "low"}, system=SAFETY_PROMPT,
+                                                  messages=[{"role": "user", "content": content}])
+    except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
+        return False, f"safety check failed ({e.__class__.__name__})"
+    text = next((b.text for b in r.content if b.type == "text"), "").strip()
+    if r.stop_reason == "refusal" or not text.upper().startswith("SAFE"):
+        return False, text[:120] or "refused"
+    return True, text[:120]
+
+
 def upload(yt, path, clip, hashtag="", title_text=None):
+    """Returns the video id, or None if the safety check blocked it."""
+    ok, why = safe_to_post(path)
+    if not ok:
+        print(f"  blocked by safety check: {why}", flush=True)
+        return None
     from googleapiclient.http import MediaFileUpload
     who = clip["broadcaster_name"]
     tags = f"{hashtag} #shorts".strip()  # campaign rules require the streamer hashtag in the caption
@@ -254,7 +293,9 @@ def main():
             if dry:
                 print(f"  dry run, saved {path}"); continue
             yt = yt or youtube()
-            print(f"  uploaded https://youtu.be/{upload(yt, path, clip, s.get('hashtag', ''), title)}")
+            vid = upload(yt, path, clip, s.get('hashtag', ''), title)
+            if vid:
+                print(f"  uploaded https://youtu.be/{vid}")
             posted.add(clip["id"]); POSTED.write_text(json.dumps(sorted(posted)))
             path.unlink()
         if budget <= 0:
