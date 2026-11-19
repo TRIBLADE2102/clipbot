@@ -9,14 +9,20 @@
     {
       "twitch_login": "clix",
       "hashtag": "#Clix",
-      "facecam": [0, 292, 488, 274],
+      "facecam": [
+        0,
+        292,
+        488,
+        274
+      ],
       "permission": "Content Rewards: $5,000 Clix Pool Campaign (Reach), joined 2026-11-16, ends 30 Nov. Clix name on screen + #Clix."
     }
   ],
-  "clips_per_run": 1,
+  "clips_per_run": 0,
   "lookback_hours": 48,
   "min_views": 300,
   "privacy": "public",
   "prefer_game": "Grand Theft Auto VI",
-  "disclosure": "#ad Paid clip"
+  "disclosure": "#ad Paid clip",
+  "live_max_uploads": 0
 }
