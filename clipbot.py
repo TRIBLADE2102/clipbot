@@ -237,6 +237,19 @@ def safe_to_post(path):
     return True, text[:120]
 
 
+def notify(title, msg, url):
+    """Phone alert via ntfy.sh (free app, no account). Skipped if NTFY_TOPIC isn't set."""
+    topic = os.environ.get("NTFY_TOPIC")
+    if not topic:
+        return
+    try:
+        req = Request(f"https://ntfy.sh/{topic}", data=msg.encode(),
+                      headers={"Title": title.encode("ascii", "ignore").decode(), "Click": url, "Priority": "high"})
+        urlopen(req, timeout=15).close()
+    except OSError as e:
+        print(f"  ! alert failed: {e}", flush=True)
+
+
 def upload(yt, path, clip, hashtag="", title_text=None):
     """Returns the video id, or None if the safety check blocked it."""
     ok, why = safe_to_post(path)
@@ -252,6 +265,8 @@ def upload(yt, path, clip, hashtag="", title_text=None):
     body = {"snippet": {"title": title, "description": desc, "categoryId": "20", "tags": [who, "twitch", "clips"]},
             "status": {"privacyStatus": CONFIG["privacy"], "selfDeclaredMadeForKids": False}}
     res = yt.videos().insert(part="snippet,status", body=body, media_body=MediaFileUpload(str(path), resumable=True)).execute()
+    link = f"https://youtube.com/shorts/{res['id']}"
+    notify(f"Submit to {hashtag or who} campaign now (30 min)", f"{title}\n{link}", link)
     return res["id"]
 
 
