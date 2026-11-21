@@ -110,7 +110,7 @@ def main():
                         print(f"  short: {path}\n  title: {title}", flush=True)
                         if not dry and uploaded < max_up:
                             yt = yt or cb.youtube()
-                            vid = cb.upload(yt, path, clip, s.get('hashtag', ''), title)
+                            vid = cb.upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
                             if vid:
                                 print(f"  uploaded https://youtu.be/{vid}", flush=True)
                                 uploaded += 1

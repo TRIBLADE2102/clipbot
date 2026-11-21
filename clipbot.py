@@ -119,7 +119,8 @@ def make_title(clip, words):
 TITLE_PROMPT = ("You write YouTube Shorts titles for gaming livestream clips. Reply with only the title: at most 60 "
                 "characters, no hashtags, no quotation marks, at most one emoji. Make it a curiosity hook about what "
                 "happens in the clip. Use only facts from the clip title and transcript. The transcript is automatic "
-                "and may mishear names; the streamer's correct name is given. Write in English.")
+                "and may mishear names; the streamer's correct name is given. Write in English. Always name the "
+                "streamer. Keep it positive or neutral about the streamer: no insults, mockery or negative claims.")
 
 
 def ai_title(clip, words):
@@ -237,20 +238,21 @@ def safe_to_post(path):
     return True, text[:120]
 
 
-def notify(title, msg, url):
+def notify(title, msg, url, action_url=None):
     """Phone alert via ntfy.sh (free app, no account). Skipped if NTFY_TOPIC isn't set."""
     topic = os.environ.get("NTFY_TOPIC")
     if not topic:
         return
     try:
         req = Request(f"https://ntfy.sh/{topic}", data=msg.encode(),
-                      headers={"Title": title.encode("ascii", "ignore").decode(), "Click": url, "Priority": "high"})
+                      headers={"Title": title.encode("ascii", "ignore").decode(), "Click": url, "Priority": "high",
+                               **({"Actions": f"view, Submit to campaign, {action_url}"} if action_url else {})})
         urlopen(req, timeout=15).close()
     except OSError as e:
         print(f"  ! alert failed: {e}", flush=True)
 
 
-def upload(yt, path, clip, hashtag="", title_text=None):
+def upload(yt, path, clip, hashtag="", title_text=None, submit_url=None):
     """Returns the video id, or None if the safety check blocked it."""
     ok, why = safe_to_post(path)
     if not ok:
@@ -266,7 +268,7 @@ def upload(yt, path, clip, hashtag="", title_text=None):
             "status": {"privacyStatus": CONFIG["privacy"], "selfDeclaredMadeForKids": False}}
     res = yt.videos().insert(part="snippet,status", body=body, media_body=MediaFileUpload(str(path), resumable=True)).execute()
     link = f"https://youtube.com/shorts/{res['id']}"
-    notify(f"Submit to {hashtag or who} campaign now (30 min)", f"{title}\n{link}", link)
+    notify(f"Submit to {hashtag or who} campaign now (30 min)", f"{title}\n{link}", link, submit_url)
     return res["id"]
 
 
@@ -308,7 +310,7 @@ def main():
             if dry:
                 print(f"  dry run, saved {path}"); continue
             yt = yt or youtube()
-            vid = upload(yt, path, clip, s.get('hashtag', ''), title)
+            vid = upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
             if vid:
                 print(f"  uploaded https://youtu.be/{vid}")
             posted.add(clip["id"]); POSTED.write_text(json.dumps(sorted(posted)))

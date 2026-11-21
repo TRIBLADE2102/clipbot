@@ -4,7 +4,8 @@
       "twitch_login": "jshock9nine",
       "hashtag": "#JShock",
       "watermark": "assets/jshock_watermark.png",
-      "permission": "Content Rewards: $3,000 JShock Clipping Campaign (Reach), joined 2026-11-16, ends 27 Nov. Needs JShock watermark + #JShock."
+      "permission": "Content Rewards: $3,000 JShock Clipping Campaign (Reach), joined 2026-11-16, ends 27 Nov. Needs JShock watermark + #JShock.",
+      "submit_url": "https://contentrewards.com/c/campaigns/fb463a98-3b5b-476d-a789-529b4a7120bd"
     },
     {
       "twitch_login": "clix",
@@ -15,7 +16,8 @@
         488,
         274
       ],
-      "permission": "Content Rewards: $5,000 Clix Pool Campaign (Reach), joined 2026-11-16, ends 30 Nov. Clix name on screen + #Clix."
+      "permission": "Content Rewards: $5,000 Clix Pool Campaign (Reach), joined 2026-11-16, ends 30 Nov. Clix name on screen + #Clix. Also joined $5,000 Clix GTA VI Marathon Pool (Reach) 2026-11-22; submit there (rules: reachclipping.com/ClixGTA).",
+      "submit_url": "https://contentrewards.com/c/campaigns/985dc674-c75e-44fc-ac87-1b1506324389"
     }
   ],
   "clips_per_run": 1,
