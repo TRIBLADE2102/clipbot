@@ -231,7 +231,7 @@ def safe_to_post(path):
                                                   messages=[{"role": "user", "content": content}])
     except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
         return False, f"safety check failed ({e.__class__.__name__})"
-    text = next((b.text for b in r.content if b.type == "text"), "").strip()
+    text = next((b.text for b in r.content if b.type == "text"), "").strip().lstrip("*# ")  # model sometimes bolds the verdict
     if r.stop_reason == "refusal" or not text.upper().startswith("SAFE"):
         return False, text[:120] or "refused"
     return True, text[:120]
