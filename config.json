@@ -22,9 +22,9 @@
   ],
   "clips_per_run": 1,
   "lookback_hours": 48,
-  "min_views": 300,
+  "min_views": 1000,
   "privacy": "public",
   "prefer_game": "Grand Theft Auto VI",
   "disclosure": "#ad Paid clip",
-  "live_max_uploads": 4
+  "live_max_uploads": 1
 }

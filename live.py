@@ -12,7 +12,7 @@ import clipbot as cb
 
 WINDOW = 10          # seconds per chat-count bucket
 SEG = 5              # seconds per recorded segment
-BEFORE, AFTER = 25, 10   # clip covers 25s before the spike bucket and 10s after it
+BEFORE, AFTER = 14, 8   # short build-up so the payoff comes early; viewers swipe away from slow starts
 
 
 def is_spike(count, history):
@@ -97,7 +97,9 @@ def main():
             c = counts.pop(cur, 0)
             spike_at = cur * WINDOW
             if is_spike(c, history) and spike_at - last_clip > 60:
-                print(f"spike: {c} msgs/{WINDOW}s (normal {statistics.median(history):.0f})", flush=True)
+                base = statistics.median(history)
+                strong = c >= max(25, base * 8)  # only the biggest moments get uploaded; the rest are kept as downloads
+                print(f"spike: {c} msgs/{WINDOW}s (normal {base:.0f}){' STRONG' if strong else ''}", flush=True)
                 time.sleep(AFTER + SEG + 2)  # let the aftermath get recorded
                 n += 1
                 raw = seg_dir / f"cut_{spike_at}.mp4"
@@ -108,7 +110,7 @@ def main():
                     try:
                         path, title = cb.make_short(clip, s)
                         print(f"  short: {path}\n  title: {title}", flush=True)
-                        if not dry and uploaded < max_up:
+                        if not dry and strong and uploaded < max_up:
                             yt = yt or cb.youtube()
                             vid = cb.upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
                             if vid:
