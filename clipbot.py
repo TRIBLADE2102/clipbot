@@ -145,6 +145,74 @@ def ai_title(clip, words):
     return text[:70] or None
 
 
+def wrap(text, font, d, width=1000, lines=2):
+    """Greedy word wrap; returns the lines, or None if it needs more than `lines`."""
+    out, cur = [], ""
+    for w in text.split():
+        if cur and d.textlength(f"{cur} {w}", font=font) > width:
+            out.append(cur); cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    out.append(cur)
+    return out if len(out) <= lines else None
+
+
+def title_png(title, credit, path):
+    """Top bar (1080x270): the hook title big on up to 2 lines, small credit/disclosure line under it."""
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new("RGBA", (1080, 270), (0, 0, 0, 255))
+    d = ImageDraw.Draw(img)
+    text = title.replace("…", "...").encode("ascii", "ignore").decode().strip()  # the font has no emoji
+    for size in range(76, 36, -4):
+        font = ImageFont.truetype(FONT, size)
+        lines = wrap(text, font, d)
+        if lines:
+            break
+    else:
+        lines = [text[:40]]
+    d.multiline_text((540, 105), "\n".join(lines), font=font, fill="white", anchor="mm", align="center", spacing=10)
+    d.text((540, 235), credit, font=ImageFont.truetype(FONT, 28), fill=(170, 170, 170), anchor="mm")
+    img.save(path)
+
+
+def find_cam(video):
+    """Finds the streamer's webcam by face detection, so a layout change between streams can't break the Short.
+    Returns a 16:9 crop box (x, y, w, h) around the face, or None (no steady face, or the face already fills the screen)."""
+    try:
+        import cv2
+    except ImportError:
+        return None
+    cap = cv2.VideoCapture(str(video))
+    W, H, total = int(cap.get(3)), int(cap.get(4)), int(cap.get(7)) or 1
+    det = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    hits = []
+    for i in range(10):
+        cap.set(1, total * (i + 1) // 11)
+        ok, frame = cap.read()
+        if ok:
+            hits += [tuple(int(v) for v in f) for f in
+                     det.detectMultiScale(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), 1.1, 6, minSize=(H // 25, H // 25))]
+    cap.release()
+    return cam_box(hits, W, H)
+
+
+def cam_box(hits, W, H):
+    # a webcam face stays in one place all clip; in-game faces move around, so keep the biggest cluster
+    near = lambda a, b: abs(a[0] + a[2] / 2 - b[0] - b[2] / 2) < a[2] * 0.6 and abs(a[1] + a[3] / 2 - b[1] - b[3] / 2) < a[3] * 0.6
+    groups = sorted(([b for b in hits if near(a, b)] for a in hits), key=len, reverse=True)
+    if not groups or len(groups[0]) < 4:
+        return None
+    g = sorted(groups[0], key=lambda f: f[2])
+    fx, fy, fw, fh = g[len(g) // 2]
+    if fw > W * 0.14:  # full-screen camera scene: nothing to split
+        return None
+    w = min(W, int(fw * 4.6)) // 2 * 2
+    h = w * 9 // 16 // 2 * 2
+    x = min(max(0, fx + fw // 2 - w // 2), W - w)
+    y = min(max(0, fy + fh // 2 - int(h * 0.42)), H - h)
+    return x, y, w, h
+
+
 def make_short(clip, s):
     """Download the clip and render a 9:16 Short. Returns (path, title)."""
     tmp = OUT / f"{clip['id']}_tmp"
@@ -155,22 +223,22 @@ def make_short(clip, s):
     else:
         subprocess.run(["yt-dlp", "-q", "-o", str(raw), clip["url"]], check=True)
     words = transcribe(raw)
-    if s.get("facecam"):  # split: streamer's camera big on top, gameplay below
-        x, y, w, h = s["facecam"]
-        vf = (f"[0:v]crop={w}:{h}:{x}:{y},scale=1080:640:force_original_aspect_ratio=increase,crop=1080:640[cam];"
-              "[0:v]crop=ih*1080/1280:ih,scale=1080:1280[game];[cam][game]vstack[v0]")
-        banner_y, banner_size, cap_y, wm_y = 0, 40, 530, 1690
-    else:  # blurred background, full clip centred
-        vf = ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:5[bg];"
-              "[0:v]scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[v0]")
-        banner_y, banner_size, cap_y, wm_y = 430, 64, 1280, 1600
-    text_png(f"{CONFIG['disclosure']} · {clip['broadcaster_name']} · twitch.tv/{clip['broadcaster_login']}",
-             tmp / "banner.png", size=banner_size, height=110 if s.get("facecam") else 160)
-    inputs, cur, n = ["-i", str(raw), "-i", str(tmp / "banner.png")], "v0", 1
-    vf += f";[{cur}][1:v]overlay=0:{banner_y}[v1]"; cur = "v1"
+    title = ai_title(clip, words) or make_title(clip, words)
+    cam = find_cam(raw)
+    if cam:  # title bar, streamer's face big, gameplay below
+        x, y, w, h = cam
+        vf = (f"[0:v]crop={w}:{h}:{x}:{y},scale=1080:608[cam];[0:v]crop=ih*1080/1042:ih,scale=1080:1042[game];"
+              "[cam][game]vstack,pad=1080:1920:0:270:black[v0]")
+        cap_y, wm_y, wm_w = 768, 1500, 440
+    else:  # title bar, then the clip zoomed to fill the width
+        vf = "[0:v]crop=ih*4/5:ih,scale=1080:1350,pad=1080:1920:0:270:black[v0]"
+        cap_y, wm_y, wm_w = 1250, 1660, 560
+    title_png(title, f"{CONFIG['disclosure']} · {clip['broadcaster_name']} · twitch.tv/{clip['broadcaster_login']}", tmp / "title.png")
+    inputs, cur, n = ["-i", str(raw), "-i", str(tmp / "title.png")], "v0", 1
+    vf += f";[{cur}][1:v]overlay=0:0[v1]"; cur = "v1"
     if s.get("watermark"):  # streamer's required watermark
         n += 1; inputs += ["-i", str(HERE / s["watermark"])]
-        vf += f";[{n}:v]scale=640:-1[wm];[{cur}][wm]overlay=(W-w)/2:{wm_y}[v{n}]"; cur = f"v{n}"
+        vf += f";[{n}:v]scale={wm_w}:-1[wm];[{cur}][wm]overlay=(W-w)/2:{wm_y}[v{n}]"; cur = f"v{n}"
     for i, (text, start, end) in enumerate(caption_chunks(words)):
         png = tmp / f"cap{i}.png"
         text_png(text, png, size=88, height=220, stroke=9)
@@ -179,7 +247,7 @@ def make_short(clip, s):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", vf, "-map", f"[{cur}]", "-map", "0:a?",
                     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", str(final)], check=True)
     shutil.rmtree(tmp)
-    return final, ai_title(clip, words) or make_title(clip, words)
+    return final, title
 
 
 def youtube():
@@ -287,6 +355,10 @@ def selftest():
     q = [(x, 0, 0) for x in "Yo, yo, all right, I'm gonna give you a PC. Can you get this kid's address?".split()]
     assert make_title({"title": "pc winner"}, q) == '"Can you get this kid\'s address?"', make_title({"title": "pc winner"}, q)
     assert make_title({"title": "SAN DIEGO DAY 2 !discord !clips"}, []) == "SAN DIEGO DAY 2"
+    web = [(100, 400, 60, 60)] * 6 + [(900, 300, 80, 80), (1500, 700, 50, 50)]  # steady webcam face + 2 in-game faces
+    x, y, w, h = cam_box(web, 1920, 1080)
+    assert x <= 100 and x + w >= 160 and y <= 400 and y + h >= 460 and w * 9 // 16 // 2 * 2 == h, (x, y, w, h)
+    assert cam_box([(600, 200, 500, 500)] * 6, 1920, 1080) is None and cam_box(web[6:], 1920, 1080) is None
     print("selftest ok")
 
 
