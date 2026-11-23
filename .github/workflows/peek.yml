@@ -1,0 +1,35 @@
+name: peek
+on: {workflow_dispatch: {}}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && pip install -q yt-dlp
+      - name: Grab raw frames of top clips
+        env:
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+        run: |
+          mkdir -p peek && python - <<'PY'
+          import subprocess, json, os, sys
+          sys.path.insert(0, '.')
+          os.environ.setdefault('ANTHROPIC_API_KEY', '')
+          import clipbot as cb
+          h = cb.twitch_headers()
+          for s in cb.CONFIG['streamers']:
+              login = s['twitch_login']
+              clips = sorted(cb.fetch_clips(h, login, 96), key=lambda x: -x['view_count'])[:3]
+              for i, c in enumerate(clips):
+                  raw = f'peek/{login}_{i}.mp4'
+                  subprocess.run(['yt-dlp', '-q', '-o', raw, c['url']], check=True)
+                  for t in (2, 10):
+                      subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-ss', str(t), '-i', raw, '-frames:v', '1', f'peek/{login}_{i}_t{t}.jpg'])
+                  print(login, c['view_count'], c['title'], c.get('game_id'), c['duration'])
+          PY
+          rm -f peek/*_2.mp4
+      - uses: actions/upload-artifact@v4
+        with: {name: peek, path: peek, retention-days: 2}
