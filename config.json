@@ -11,7 +11,27 @@
       "twitch_login": "clix",
       "hashtag": "#Clix",
       "permission": "Content Rewards: $5,000 Clix Pool Campaign (Reach), joined 2026-11-16, ends 30 Nov. Clix name on screen + #Clix. Also joined $5,000 Clix GTA VI Marathon Pool (Reach) 2026-11-22; submit there (rules: reachclipping.com/ClixGTA).",
-      "submit_url": "https://contentrewards.com/c/campaigns/985dc674-c75e-44fc-ac87-1b1506324389"
+      "submit_url": "https://contentrewards.com/c/campaigns/17ff5e37-a774-4a75-a1a4-d47dba98a60e"
+    },
+    {
+      "twitch_login": "lacy",
+      "hashtag": "#LACY",
+      "gta_only": true,
+      "permission": "Content Rewards: $12,500 LACY GTA VI Marathon Pool (Reach), joined 2026-11-24. GTA marathon content only, name LACY + #LACY. Rules: reachclipping.com/LACYGTA",
+      "submit_url": "https://contentrewards.com/c/campaigns/a5c63fad-cd53-4b81-9305-4a2d1696872a"
+    },
+    {
+      "twitch_login": "yourragegaming",
+      "hashtag": "#YourRAGE",
+      "permission": "Content Rewards: YourRAGE $7,500 Pool (Reach), joined 2026-11-24, runs 30 days. Name Rage + #YourRAGE. Rules: reachclipping.com/YourRAGEPool",
+      "submit_url": "https://contentrewards.com/c/campaigns/2064cdb1-4357-4380-b99c-119c5b320d31"
+    },
+    {
+      "twitch_login": "silky",
+      "hashtag": "#Silky",
+      "gta_only": true,
+      "permission": "Content Rewards: $7,500 Silky Pool (Reach), joined 2026-11-24. GTA marathon content only, name Silky + #Silky. Rules: reachclipping.com/Silky",
+      "submit_url": "https://contentrewards.com/c/campaigns/37f68297-664c-4820-a020-9bbb4a703bf9"
     }
   ],
   "clips_per_run": 1,

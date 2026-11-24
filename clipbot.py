@@ -373,7 +373,10 @@ def main():
     for s in CONFIG["streamers"]:
         if not s.get("permission", "").strip() or s["permission"].startswith("Leave blank"):
             print(f"skip {s['twitch_login']}: no clipping permission recorded"); continue
-        for clip in pick_clips(fetch_clips(h, s["twitch_login"], CONFIG["lookback_hours"]), posted, CONFIG["min_views"], budget, prefer):
+        clips = fetch_clips(h, s["twitch_login"], CONFIG["lookback_hours"])
+        if s.get("gta_only"):  # campaign only pays for the GTA marathon
+            clips = [c for c in clips if c.get("game_id") == prefer]
+        for clip in pick_clips(clips, posted, CONFIG["min_views"], budget, prefer):
             clip["broadcaster_login"] = s["twitch_login"]  # Helix clips don't return the login
             print(f"{s['twitch_login']}: {clip['title']!r} ({clip['view_count']} views)")
             path, title = make_short(clip, s)

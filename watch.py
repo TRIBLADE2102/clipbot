@@ -6,6 +6,9 @@ import clipbot as cb
 logins = [s["twitch_login"] for s in cb.CONFIG["streamers"] if s.get("permission", "").strip()]
 live = cb.http_json("https://api.twitch.tv/helix/streams?" + "&".join(f"user_login={l}" for l in logins),
                     headers=cb.twitch_headers())["data"]
+gta_only = {s["twitch_login"] for s in cb.CONFIG["streamers"] if s.get("gta_only")}
+live = [st for st in live if st["user_login"].lower() not in gta_only or st["game_name"] == cb.CONFIG.get("prefer_game")]
+live.sort(key=lambda st: -st["viewer_count"])  # record the biggest live stream first
 if os.environ.get("CI") and live:  # cloud: record the first live streamer inside this job (max 6h)
     # shortcut: one streamer at a time in the cloud; a second live streamer waits for the next check
     import live as lv
