@@ -369,29 +369,29 @@ def main():
     posted = set(json.loads(POSTED.read_text())) if POSTED.exists() and not dry else set()  # dry run previews even posted clips
     h, yt = twitch_headers(), None
     prefer = game_id(h, CONFIG.get("prefer_game", ""))
-    budget = CONFIG["clips_per_run"]
+    pool = []  # clips from every permitted streamer, so the most-viewed one wins whoever made it
     for s in CONFIG["streamers"]:
         if not s.get("permission", "").strip() or s["permission"].startswith("Leave blank"):
             print(f"skip {s['twitch_login']}: no clipping permission recorded"); continue
         clips = fetch_clips(h, s["twitch_login"], CONFIG["lookback_hours"])
         if s.get("gta_only"):  # campaign only pays for the GTA marathon
             clips = [c for c in clips if c.get("game_id") == prefer]
-        for clip in pick_clips(clips, posted, CONFIG["min_views"], budget, prefer):
-            clip["broadcaster_login"] = s["twitch_login"]  # Helix clips don't return the login
-            print(f"{s['twitch_login']}: {clip['title']!r} ({clip['view_count']} views)")
-            path, title = make_short(clip, s)
-            print(f"  title: {title}")
-            budget -= 1
-            if dry:
-                print(f"  dry run, saved {path}"); continue
-            yt = yt or youtube()
-            vid = upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
-            if vid:
-                print(f"  uploaded https://youtu.be/{vid}")
-            posted.add(clip["id"]); POSTED.write_text(json.dumps(sorted(posted)))
-            path.unlink()
-        if budget <= 0:
-            break
+        for c in clips:
+            c["broadcaster_login"], c["_s"] = s["twitch_login"], s  # Helix clips don't return the login
+        pool += clips
+    for clip in pick_clips(pool, posted, CONFIG["min_views"], CONFIG["clips_per_run"], prefer):
+        s = clip.pop("_s")
+        print(f"{s['twitch_login']}: {clip['title']!r} ({clip['view_count']} views)")
+        path, title = make_short(clip, s)
+        print(f"  title: {title}")
+        if dry:
+            print(f"  dry run, saved {path}"); continue
+        yt = yt or youtube()
+        vid = upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
+        if vid:
+            print(f"  uploaded https://youtu.be/{vid}")
+        posted.add(clip["id"]); POSTED.write_text(json.dumps(sorted(posted)))
+        path.unlink()
 
 
 if __name__ == "__main__":
