@@ -86,7 +86,7 @@ def main():
     threading.Thread(target=chat_counter, args=(login, counts, stop), daemon=True).start()
     print(f"recording {login}; watching chat", flush=True)
 
-    history, last_clip, uploaded, yt, n = deque(maxlen=30), 0, 0, None, 0
+    history, last_clip, uploaded, yt, n, t0 = deque(maxlen=30), 0, 0, None, 0, time.time()
     cur = int(time.time() // WINDOW)
     try:
         while rec.poll() is None:
@@ -98,7 +98,7 @@ def main():
             spike_at = cur * WINDOW
             if is_spike(c, history) and spike_at - last_clip > 60:
                 base = statistics.median(history)
-                strong = c >= max(25, base * 8)  # only the biggest moments get uploaded; the rest are kept as downloads
+                strong = c >= max(25, base * 8)
                 print(f"spike: {c} msgs/{WINDOW}s (normal {base:.0f}){' STRONG' if strong else ''}", flush=True)
                 time.sleep(AFTER + SEG + 2)  # let the aftermath get recorded
                 n += 1
@@ -110,7 +110,7 @@ def main():
                     try:
                         path, title = cb.make_short(clip, s)
                         print(f"  short: {path}\n  title: {title}", flush=True)
-                        if not dry and strong and uploaded < max_up:
+                        if not dry and uploaded < min(max_up, 1 + int((time.time() - t0) // 7200)):  # at most 1 upload per 2h of recording, so posts are spaced out
                             yt = yt or cb.youtube()
                             vid = cb.upload(yt, path, clip, s.get('hashtag', ''), title, s.get('submit_url'))
                             if vid:

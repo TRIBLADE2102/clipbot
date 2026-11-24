@@ -1,7 +1,9 @@
 name: clips
 on:
-  schedule: [{cron: "30 1,9,17 * * *"}]   # 3 a day; a new channel posting 20+/day gets treated as spam
+  schedule: [{cron: "30 */6 * * *"}]   # 4 a day at most; a new channel posting 20+/day gets treated as spam
   workflow_dispatch:
+    inputs:
+      upload: {description: "Really upload (off = test run)", type: boolean, default: false}
 concurrency: {group: clips, cancel-in-progress: false}
 permissions: {contents: write}        # to save posted.json back
 jobs:
@@ -26,7 +28,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           printf '%s' "$YT_TOKEN" > token.json
-          python -u clipbot.py ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
+          python -u clipbot.py ${{ (github.event_name == 'workflow_dispatch' && !inputs.upload) && '--dry-run' || '' }}
       - name: Save posted list
         if: always()
         run: |
